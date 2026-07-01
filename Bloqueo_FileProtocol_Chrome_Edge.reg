@@ -1,0 +1,24 @@
+Windows Registry Editor Version 5.00
+
+; =========================
+; GOOGLE CHROME
+; =========================
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+; (Opcional) Deshabilita cuadros de selección de archivos (puede afectar adjuntos)
+; "AllowFileSelectionDialogs"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\URLBlocklist]
+"1"="file://*"
+
+; =========================
+; MICROSOFT EDGE
+; =========================
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+; (Opcional) Deshabilita cuadros de selección de archivos (puede afectar adjuntos)
+; "AllowFileSelectionDialogs"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\URLBlocklist]
+"1"="file:///C:/"
+"2"="file:///D:/"
