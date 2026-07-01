@@ -1,0 +1,1 @@
+powershell -NoExit -ExecutionPolicy Bypass -File ".\ConsultaJoinAD-Hostname.ps1"

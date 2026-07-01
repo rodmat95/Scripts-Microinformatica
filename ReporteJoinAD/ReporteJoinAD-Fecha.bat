@@ -1,0 +1,1 @@
+powershell -NoExit -ExecutionPolicy Bypass -File ".\ReporteJoinAD-Fecha.ps1"
