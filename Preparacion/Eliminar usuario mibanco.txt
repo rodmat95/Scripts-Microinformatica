@@ -1,0 +1,23 @@
+# Obtener el usuario actual con el que se ejecuta el script
+$UsuarioActual = $env:USERNAME
+$UsuarioAEliminar = "mibanco"
+
+# Lista de administradores locales permitidos (sin el prefijo del equipo)
+$AdministradoresPermitidos = @("Administrador", "AdmLocalSrvWindows")
+
+# Validar si el usuario actual está en la lista permitida
+if ($AdministradoresPermitidos -contains $UsuarioActual) {
+    Write-Host "[INFO] Sesión válida detectada. Conectado como: .\$UsuarioActual" -ForegroundColor Cyan
+    
+    # Intentar eliminar al usuario local mibanco
+    try {
+        Remove-LocalUser -Name $UsuarioAEliminar -ErrorAction Stop
+        Write-Host "[ÉXITO] El usuario local '$UsuarioAEliminar' ha sido eliminado permanentemente." -ForegroundColor Green
+    } catch {
+        # Captura si el usuario ya no existe o si falta elevación de privilegios UAC
+        Write-Host "[AVISO/ERROR] No se pudo eliminar al usuario. Comprueba si ya fue borrado o si olvidaste 'Ejecutar como Administrador'." -ForegroundColor Red
+    }
+} 
+else {
+    Write-Host "[BLOQUEADO] Sesión actual: .\$UsuarioActual. El script solo se ejecuta desde Administrador o AdmLocalSrvWindows." -ForegroundColor Yellow
+}

@@ -1,0 +1,24 @@
+# 1. Lista de administradores locales permitidos (hardcodeados)
+$AdministradoresPermitidos = @("Administrador", "AdmLocalSrvWindows")
+
+# 2. Buscar cuál de los usuarios de la lista existe actualmente en el sistema
+$usuarioEncontrado = Get-LocalUser | Where-Object { $AdministradoresPermitidos -contains $_.Name } | Select-Object -First 1
+
+# 3. Validar si se encontró un usuario válido
+if ($usuarioEncontrado) {
+    $usuarioNombre = $usuarioEncontrado.Name
+    
+    # 4. Solicitar la contraseña de forma segura
+    $password = Read-Host -Prompt "Introduce la nueva contraseña para $usuarioNombre" -AsSecureString
+    
+    try {
+        # 5. Cambiar la contraseña
+        Set-LocalUser -Name $usuarioNombre -Password $password -ErrorAction Stop
+        Write-Host "Contraseña modificada correctamente para el usuario: $usuarioNombre." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "Error: No se pudo cambiar la contraseña. Ejecuta como Administrador." -ForegroundColor Red
+    }
+} else {
+    Write-Host "Error: Ninguno de los usuarios permitidos existe en este equipo." -ForegroundColor Red
+}

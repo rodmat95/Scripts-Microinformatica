@@ -1,0 +1,21 @@
+# 1. Obtener de manera directa el nombre del dominio de red configurado en el sistema
+$PropiedadesRed = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties()
+$DominioActual = $PropiedadesRed.DomainName
+$DominioCorrecto = "domibco.com.pe"
+
+# 2. Evaluar el estado de pertenencia del equipo
+if ([string]::IsNullOrEmpty($DominioActual)) {
+    Write-Host "[CRÍTICO] El equipo NO está unido a un dominio." -ForegroundColor Red
+    Write-Host " -> Está configurado localmente en un Grupo de Trabajo." -ForegroundColor Yellow
+} 
+else {
+    # Comprobar si el dominio actual de red coincide con el esperado (sin importar mayúsculas/minúsculas)
+    if ($DominioActual -eq $DominioCorrecto) {
+        Write-Host "[ÉXITO] El equipo está en el dominio correcto: $DominioActual" -ForegroundColor Green
+    } 
+    else {
+        Write-Host "[ALERTA] El equipo está en un dominio INCORRECTO." -ForegroundColor Red
+        Write-Host " -> Dominio detectado: $DominioActual" -ForegroundColor Yellow
+        Write-Host " -> Dominio esperado:  $DominioCorrecto" -ForegroundColor Cyan
+    }
+}

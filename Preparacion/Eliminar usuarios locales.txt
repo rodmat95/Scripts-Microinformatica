@@ -1,0 +1,30 @@
+# Obtener el nombre del equipo actual en mayúsculas para estandarizar
+$Hostname = $env:COMPUTERNAME.ToUpper()
+$GrupoLocal = "Usuarios"
+
+# Validación según el inicio del Hostname (Usando patrones en mayúsculas)
+if ($Hostname -like "L12*") {
+    Write-Host "[INFO] Equipo LAPTOP detectado ($Hostname)." -ForegroundColor Cyan
+    
+    # Intentar eliminar los grupos locales
+    try {
+        # Se remueve -ErrorAction SilentlyContinue del bloque try para que el catch realmente capture si hay un error real
+        Remove-LocalGroupMember -Group $GrupoLocal -Member "DOMIBCO\Usuarios del dominio" -ErrorAction Stop
+        Remove-LocalGroupMember -Group $GrupoLocal -Member "S-1-5-11" -ErrorAction Stop
+        Write-Host "[ÉXITO] Se eliminaron los usuarios de dominio y autentificados del grupo local." -ForegroundColor Green
+    } catch {
+        Write-Host "[ERROR] No se pudieron remover los usuarios. Asegúrate de ejecutar como Administrador o verifica si los usuarios ya habían sido eliminados." -ForegroundColor Red
+    }
+} 
+elseif ($Hostname -like "P*") {
+    Write-Host "[INFO] Equipo PC detectado ($Hostname). No se eliminaron usuarios." -ForegroundColor Yellow
+}
+elseif ($Hostname -like "A12*") {
+    Write-Host "[INFO] Máquina virtual AZURE detectada ($Hostname). No se eliminaron usuarios." -ForegroundColor Yellow
+}
+elseif ($Hostname -like "V12*") {
+    Write-Host "[INFO] Máquina virtual ONPREMISE detectada ($Hostname). No se eliminaron usuarios." -ForegroundColor Yellow
+} 
+else {
+    Write-Host "[ALERTA] El equipo ($Hostname) no coincide con los patrones establecidos. No se realizaron cambios." -ForegroundColor DarkYellow
+}

@@ -1,0 +1,13 @@
+# Asegurar que la cuenta esté habilitada y la expiración
+Set-LocalUser -Name "Administrador" `
+              -PasswordNeverExpires $true `
+              -UserMayChangePassword $true
+
+# Habilitar la cuenta explícitamente por si se encontraba deshabilitada
+Enable-LocalUser -Name "Administrador"
+
+# Convertir la contraseña del 1 al 8 en un string seguro
+$Password = ConvertTo-SecureString "12345678" -AsPlainText -Force
+
+# Aplicar la contraseña a la cuenta del administrador local
+Set-LocalUser -Name "Administrador" -Password $Password
