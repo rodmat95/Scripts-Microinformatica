@@ -1,0 +1,52 @@
+# ======================================================
+# FASE 2b - PASO 4: Configurar grupos locales segun hostname
+# ======================================================
+# Requisito : Ejecutar como DOMIBCO\AdmLocalSrvWindows
+# Proposito : Segun el tipo de equipo (Laptop, PC, VM),
+#             remover los grupos de dominio del grupo
+#             local 'Usuarios' si corresponde al tipo
+#             de equipo.
+# ======================================================
+
+$DominioNetBIOS = "DOMIBCO"
+$GrupoLocal     = "Usuarios"
+$Hostname       = $env:COMPUTERNAME.ToUpper()
+
+# 1. Mostrar hostname detectado
+Write-Host "[INFO] Hostname detectado: $Hostname" -ForegroundColor Cyan
+
+# 2. Aplicar configuracion segun el patron del hostname
+if ($Hostname -like "L12*") {
+
+    # Laptop: remover usuarios de dominio del grupo local Usuarios
+    Write-Host "[INFO] Laptop detectada. Removiendo usuarios de dominio del grupo local..." -ForegroundColor Cyan
+
+    try {
+        Remove-LocalGroupMember `
+            -Group $GrupoLocal `
+            -Member "$DominioNetBIOS\Usuarios del dominio" `
+            -ErrorAction Stop
+
+        Remove-LocalGroupMember `
+            -Group $GrupoLocal `
+            -Member "S-1-5-11" `
+            -ErrorAction Stop
+
+        Write-Host "[OK] Usuarios de dominio y autenticados removidos del grupo '$GrupoLocal'." -ForegroundColor Green
+    }
+    catch {
+        Write-Host "[INFO] Algunos miembros ya no existian en el grupo o ya fueron removidos." -ForegroundColor Yellow
+    }
+}
+elseif ($Hostname -like "P*") {
+    Write-Host "[INFO] PC detectada ($Hostname). No se realizan cambios en el grupo local." -ForegroundColor Yellow
+}
+elseif ($Hostname -like "A12*") {
+    Write-Host "[INFO] VM Azure detectada ($Hostname). No se realizan cambios en el grupo local." -ForegroundColor Yellow
+}
+elseif ($Hostname -like "V12*") {
+    Write-Host "[INFO] VM OnPremise detectada ($Hostname). No se realizan cambios en el grupo local." -ForegroundColor Yellow
+}
+else {
+    Write-Host "[ALERTA] Hostname no reconocido ($Hostname). No se realizaron cambios." -ForegroundColor DarkYellow
+}

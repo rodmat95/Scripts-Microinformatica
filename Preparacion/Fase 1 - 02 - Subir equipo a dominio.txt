@@ -1,0 +1,43 @@
+# ======================================================
+# FASE 1 - PASO 2: Renombrar equipo y unirlo al dominio
+# ======================================================
+# Requisito : Ejecutar como .\Administrador (cuenta local)
+# Proposito : Cambiar el hostname del equipo y unirlo al
+#             dominio corporativo. El equipo se reiniciara
+#             automaticamente al finalizar.
+# ======================================================
+
+$DomainFQDN = "domibco.com.pe"
+
+# 1. Solicitar el nuevo nombre de equipo al usuario
+$InputHostname = Read-Host "Ingrese el nuevo hostname para el equipo"
+
+# 2. Forzar conversion a mayusculas para estandarizar
+$NuevoHostname = $InputHostname.ToUpper()
+
+Write-Host "[INFO] Hostname a asignar: $NuevoHostname" -ForegroundColor Cyan
+
+# 3. Solicitar credenciales del Administrador del dominio
+$Credenciales = Get-Credential `
+    -UserName "$DomainFQDN\Administrador" `
+    -Message "Ingrese la clave del Administrador del Dominio para unir '$NuevoHostname'"
+
+# 4. Cambiar el nombre del equipo y unirlo al dominio
+try {
+    Add-Computer `
+        -NewName $NuevoHostname `
+        -DomainName $DomainFQDN `
+        -Credential $Credenciales `
+        -Force `
+        -ErrorAction Stop
+
+    Write-Host "[OK] Equipo '$NuevoHostname' unido al dominio '$DomainFQDN'." -ForegroundColor Green
+    Write-Host "[INFO] El equipo se reiniciara para aplicar los cambios..." -ForegroundColor Yellow
+
+    # 5. Reiniciar el equipo para que los cambios tomen efecto
+    Start-Sleep -Seconds 3
+    Restart-Computer -Force
+}
+catch {
+    Write-Host "[ERROR] No se pudo unir al dominio: $($_.Exception.Message)" -ForegroundColor Red
+}

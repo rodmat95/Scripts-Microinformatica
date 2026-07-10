@@ -1,0 +1,37 @@
+# ======================================================
+# FASE 2b - PASO 3: Modificar contrasena del admin local
+# ======================================================
+# Requisito : Ejecutar como DOMIBCO\AdmLocalSrvWindows
+# Proposito : Establecer la contrasena definitiva para la
+#             cuenta de administrador local del equipo.
+#             Se detecta automaticamente el admin disponible
+#             de la lista de permitidos.
+# ======================================================
+
+$AdministradoresPermitidos = @("Administrador", "AdmLocalSrvWindows")
+
+# 1. Buscar cual de los administradores permitidos existe localmente en el equipo
+$UsuarioLocal = Get-LocalUser |
+    Where-Object { $AdministradoresPermitidos -contains $_.Name } |
+    Select-Object -First 1
+
+# 2. Validar que se encontro un usuario valido
+if ($null -eq $UsuarioLocal) {
+    Write-Host "[CRITICO] Ninguno de los administradores permitidos existe en este equipo." -ForegroundColor Red
+    exit 1
+}
+
+$NombreUsuario = $UsuarioLocal.Name
+Write-Host "[INFO] Administrador local encontrado: $NombreUsuario" -ForegroundColor Cyan
+
+# 3. Solicitar la nueva contrasena de forma segura (no se muestra en pantalla)
+$NuevaPassword = Read-Host -Prompt "Ingrese la nueva contrasena para '$NombreUsuario'" -AsSecureString
+
+# 4. Aplicar la nueva contrasena
+try {
+    Set-LocalUser -Name $NombreUsuario -Password $NuevaPassword -ErrorAction Stop
+    Write-Host "[OK] Contrasena modificada correctamente para: $NombreUsuario" -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERROR] No se pudo cambiar la contrasena. Verifique que ejecuta el script como Administrador." -ForegroundColor Red
+}

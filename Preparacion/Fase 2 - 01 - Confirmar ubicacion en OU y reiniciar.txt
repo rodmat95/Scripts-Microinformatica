@@ -1,0 +1,53 @@
+# ======================================================
+# FASE 2a - PASO 1: Confirmar ubicacion en OU y reiniciar
+# ======================================================
+# Requisito : Ejecutar como DOMIBCO\Administrador
+# Proposito : Verificar que el equipo este en la OU
+#             correcta del AD y reiniciar para continuar
+#             con Fase 2b como AdmLocalSrvWindows.
+# ======================================================
+
+$DominioCorrecto = "domibco.com.pe"
+
+# 1. Obtener el dominio actual del equipo
+$PropiedadesRed = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties()
+$DominioActual  = $PropiedadesRed.DomainName
+
+# 2. Validar que el equipo pertenezca a algun dominio
+if ([string]::IsNullOrWhiteSpace($DominioActual)) {
+    Write-Host "[CRITICO] El equipo no pertenece a un dominio. Ejecute primero Fase 1." -ForegroundColor Red
+    exit 1
+}
+
+# 3. Validar que sea el dominio correcto
+if ($DominioActual.ToLower() -ne $DominioCorrecto.ToLower()) {
+    Write-Host "[CRITICO] Dominio incorrecto." -ForegroundColor Red
+    Write-Host "  Detectado : $DominioActual" -ForegroundColor Yellow
+    Write-Host "  Esperado  : $DominioCorrecto" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "[OK] Equipo en dominio correcto: $DominioActual" -ForegroundColor Green
+
+# 4. Mostrar aviso de verificacion manual en Active Directory
+Write-Host ""
+Write-Host "  ACCION REQUERIDA:" -ForegroundColor Yellow
+Write-Host "  Verifique que el equipo '$env:COMPUTERNAME' este ubicado" -ForegroundColor White
+Write-Host "  correctamente en la OU del Active Directory." -ForegroundColor White
+Write-Host ""
+Write-Host "  Luego el equipo se reiniciara para iniciar como AdmLocalSrvWindows." -ForegroundColor White
+Write-Host ""
+
+# 5. Pedir confirmacion explicita del administrador
+$Confirmacion = Read-Host "Escriba OK cuando el equipo este correctamente ubicado en la OU"
+
+if ($Confirmacion.ToUpper() -ne "OK") {
+    Write-Host "[CANCELADO] Operacion cancelada." -ForegroundColor Yellow
+    exit 0
+}
+
+Write-Host "[OK] Ubicacion confirmada. Reiniciando equipo..." -ForegroundColor Green
+
+# 6. Reiniciar para continuar con Fase 2b
+Start-Sleep -Seconds 2
+Restart-Computer -Force

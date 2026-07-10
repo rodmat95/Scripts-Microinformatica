@@ -1,0 +1,29 @@
+# ======================================================
+# FASE 2b - PASO 2: Eliminar usuario local mibanco
+# ======================================================
+# Requisito : Ejecutar como DOMIBCO\AdmLocalSrvWindows
+# Proposito : Remover la cuenta local de imagen 'mibanco'
+#             ya que no debe existir en equipos productivos.
+# ======================================================
+
+$UsuarioAEliminar          = "mibanco"
+$AdministradoresPermitidos = @("Administrador", "AdmLocalSrvWindows")
+$UsuarioActual             = $env:USERNAME
+
+# 1. Validar que quien ejecuta sea un administrador permitido
+if ($AdministradoresPermitidos -notcontains $UsuarioActual) {
+    Write-Host "[BLOQUEADO] Usuario no autorizado: .\$UsuarioActual" -ForegroundColor Red
+    Write-Host "  Permitidos: $($AdministradoresPermitidos -join ', ')" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "[INFO] Sesion valida detectada. Conectado como: .\$UsuarioActual" -ForegroundColor Cyan
+
+# 2. Intentar eliminar el usuario local mibanco
+try {
+    Remove-LocalUser -Name $UsuarioAEliminar -ErrorAction Stop
+    Write-Host "[OK] El usuario local '$UsuarioAEliminar' ha sido eliminado permanentemente." -ForegroundColor Green
+}
+catch {
+    Write-Host "[INFO] El usuario '$UsuarioAEliminar' no existe o ya fue eliminado previamente." -ForegroundColor Yellow
+}

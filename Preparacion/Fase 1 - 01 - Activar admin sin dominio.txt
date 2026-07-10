@@ -1,0 +1,23 @@
+# ======================================================
+# FASE 1 - PASO 1: Activar cuenta Administrador local
+# ======================================================
+# Requisito : Ejecutar como el usuario local .\mibanco
+# Proposito : Habilitar la cuenta Administrador local
+#             con una contrasena temporal para poder
+#             iniciar sesion en el siguiente paso.
+# ======================================================
+
+# 1. Asegurar que la cuenta no expire y que se permita cambio de contrasena
+Set-LocalUser -Name "Administrador" `
+              -PasswordNeverExpires $true `
+              -UserMayChangePassword $true
+
+# 2. Habilitar la cuenta explicitamente por si estaba deshabilitada
+Enable-LocalUser -Name "Administrador"
+
+# 3. Establecer contrasena temporal de acceso
+$Password = ConvertTo-SecureString "12345678" -AsPlainText -Force
+Set-LocalUser -Name "Administrador" -Password $Password
+
+Write-Host "[OK] Cuenta 'Administrador' habilitada con contrasena temporal '12345678'." -ForegroundColor Green
+Write-Host "[INFO] Cierre sesion e inicie con .\Administrador antes del siguiente paso." -ForegroundColor Yellow

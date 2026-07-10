@@ -1,0 +1,105 @@
+# ======================================================
+# FASE 2b - PASO 5: Agregar usuario de red al grupo local
+# ======================================================
+# Requisito : Ejecutar como DOMIBCO\AdmLocalSrvWindows
+# Proposito : Buscar un usuario en Active Directory por
+#             su ID de red, confirmar sus datos y agregarlo
+#             al grupo local 'Usuarios' del equipo.
+#             Si el ID no existe o los datos son incorrectos,
+#             permite reingresar sin cerrar el proceso.
+# ======================================================
+
+$DominioNetBIOS = "DOMIBCO"
+$GrupoLocal     = "Usuarios"
+
+# 1. Solicitar credenciales de dominio para poder consultar Active Directory
+Write-Host "`n[REQUERIDO] Ingrese sus credenciales de red para validar el usuario en AD:" -ForegroundColor Cyan
+$Credenciales = Get-Credential `
+    -UserName "$DominioNetBIOS\$env:USERNAME" `
+    -Message "Ingrese credenciales autorizadas de dominio"
+
+# 2. Validar las credenciales contra el dominio antes de continuar
+try {
+    $LDAP = New-Object System.DirectoryServices.DirectoryEntry(
+        "LDAP://$DominioNetBIOS",
+        $Credenciales.UserName,
+        $Credenciales.GetNetworkCredential().Password
+    )
+    $null = $LDAP.NativeObject
+    Write-Host "[OK] Credenciales validadas correctamente." -ForegroundColor Green
+}
+catch {
+    Write-Host "[CRITICO] Credenciales invalidas o sin acceso al dominio." -ForegroundColor Red
+    exit 1
+}
+
+# 3. Bucle: ingresar ID, buscar en AD y confirmar hasta que sea correcto
+$UsuarioConfirmado = $false
+$NombreCompleto    = ""
+$UsuarioRed        = ""
+
+do {
+    # 3a. Solicitar el ID del usuario de red
+    $UsuarioRed = Read-Host "`nIngrese el ID del usuario de red (ej: 18374001)"
+
+    try {
+        # 3b. Buscar el usuario en Active Directory via LDAP
+        $BuscadorAD = New-Object System.DirectoryServices.DirectorySearcher
+        $BuscadorAD.SearchRoot = New-Object System.DirectoryServices.DirectoryEntry(
+            "LDAP://$DominioNetBIOS",
+            $Credenciales.UserName,
+            $Credenciales.GetNetworkCredential().Password
+        )
+        $BuscadorAD.Filter = "(&(objectCategory=person)(objectClass=user)(sAMAccountName=$UsuarioRed))"
+        $ResultadoUsuario  = $BuscadorAD.FindOne()
+
+        if ($null -eq $ResultadoUsuario) {
+            throw "El ID '$UsuarioRed' no existe en Active Directory."
+        }
+
+        # 3c. Extraer nombre completo del usuario encontrado
+        $NombreCompleto = $ResultadoUsuario.Properties["displayname"][0]
+
+        # 3d. Mostrar datos y pedir confirmacion
+        Write-Host ""
+        Write-Host "--------------------------------------------------" -ForegroundColor Gray
+        Write-Host " USUARIO ENCONTRADO EN LA RED" -ForegroundColor Green
+        Write-Host " ID de Red    : $UsuarioRed"
+        Write-Host " Nombre       : $NombreCompleto" -ForegroundColor White
+        Write-Host "--------------------------------------------------" -ForegroundColor Gray
+
+        $Confirmacion = Read-Host "¿Los datos son correctos? (S = Si / N = No, reingresar)"
+
+        if ($Confirmacion.ToUpper() -eq "S") {
+            $UsuarioConfirmado = $true
+        }
+        else {
+            Write-Host "[INFO] Se reingresara el ID del usuario de red." -ForegroundColor Yellow
+        }
+    }
+    catch {
+        Write-Host "[ERROR] $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[INFO] Intente nuevamente con un ID valido." -ForegroundColor Yellow
+    }
+
+} while (-not $UsuarioConfirmado)
+
+# 4. Agregar el usuario confirmado al grupo local del equipo
+try {
+    Write-Host "`n[PROCESANDO] Anadiendo '$UsuarioRed' al grupo '$GrupoLocal'..." -ForegroundColor Cyan
+
+    $ContextoLocal = New-Object System.DirectoryServices.DirectoryEntry(
+        "WinNT://$env:COMPUTERNAME/$GrupoLocal,group",
+        $Credenciales.UserName,
+        $Credenciales.GetNetworkCredential().Password
+    )
+
+    $RutaUsuarioRed = "WinNT://$DominioNetBIOS/$UsuarioRed"
+    $ContextoLocal.Invoke("Add", $RutaUsuarioRed)
+
+    Write-Host "[OK] El usuario '$NombreCompleto' ($UsuarioRed) fue agregado a '$GrupoLocal'." -ForegroundColor Green
+}
+catch {
+    Write-Host "[ERROR] No se pudo agregar el usuario al grupo." -ForegroundColor Red
+    Write-Host "Detalle: $($_.Exception.Message)" -ForegroundColor Yellow
+}
