@@ -13,7 +13,7 @@ $sourcePath = 'D:\0. Empaquetado\Notepad++\npp.8.8.2.Installer.x64.exe'   # arch
 
 # Ruta destino
 $shareRoot    = 'C$'
-$relativePath = ''   # '' = raíz | 'Tools' = subcarpeta
+$relativePath = 'Temp'   # '' = raíz | 'Tools' = subcarpeta
 
 # Encabezado
 $nombre = Split-Path $sourcePath -Leaf

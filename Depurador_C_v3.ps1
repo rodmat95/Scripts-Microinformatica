@@ -1,4 +1,4 @@
-﻿#requires -version 5.1
+#requires -version 5.1
 #Editor: Rodrigo Ortiz
 
 [CmdletBinding(SupportsShouldProcess = $true)]
@@ -15,28 +15,28 @@ param(
 # ========================= BASICO =========================
 function Test-Admin {
     $id = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $p  = New-Object Security.Principal.WindowsPrincipal($id)
+    $p = New-Object Security.Principal.WindowsPrincipal($id)
     return $p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Stop-ServiceSafe([string]$Name){
+function Stop-ServiceSafe([string]$Name) {
     $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
-    if($null -ne $svc -and $svc.Status -ne 'Stopped'){
+    if ($null -ne $svc -and $svc.Status -ne 'Stopped') {
         try { Stop-Service -Name $Name -Force -ErrorAction Stop; Write-Host "Servicio detenido: $Name" -ForegroundColor Yellow }
         catch { Write-Warning ("No se pudo detener {0}: {1}" -f $Name, $_.Exception.Message) }
     }
 }
 
-function Start-ServiceSafe([string]$Name){
+function Start-ServiceSafe([string]$Name) {
     $svc = Get-Service -Name $Name -ErrorAction SilentlyContinue
-    if($null -ne $svc -and $svc.Status -ne 'Running'){
+    if ($null -ne $svc -and $svc.Status -ne 'Running') {
         try { Start-Service -Name $Name -ErrorAction Stop; Write-Host "Servicio iniciado: $Name" -ForegroundColor Yellow }
         catch { Write-Warning ("No se pudo iniciar {0}: {1}" -f $Name, $_.Exception.Message) }
     }
 }
 
-function Remove-PathSafe([string]$Path){
-    if(Test-Path -LiteralPath $Path){
+function Remove-PathSafe([string]$Path) {
+    if (Test-Path -LiteralPath $Path) {
         try { Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop }
         catch {
             try { Get-ChildItem -LiteralPath $Path -Force -ErrorAction Stop | Remove-Item -Recurse -Force -ErrorAction Stop } catch {}
@@ -56,7 +56,7 @@ function Remove-FilesByAge {
     $limitDate = (Get-Date).AddDays(-$Days)
 
     $profiles = Get-ChildItem -Path $basePath -Directory -ErrorAction SilentlyContinue | Where-Object {
-        $_.Name -notin @('Public','Default','Default User','All Users') -and
+        $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') -and
         -not ($_.Name.StartsWith('WDAGUtilityAccount'))
     }
 
@@ -64,9 +64,9 @@ function Remove-FilesByAge {
 
         Write-Host "Buscando $pattern > $Days días" -ForegroundColor Yellow
 
-        foreach ($profile in $profiles) {
+        foreach ($uProfile in $profiles) {
 
-            Get-ChildItem -Path $profile.FullName -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue |
+            Get-ChildItem -Path $uProfile.FullName -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue |
             Where-Object {
                 $_.LastWriteTime -lt $limitDate -and
                 $_.FullName -notmatch $exclude
@@ -84,11 +84,11 @@ function Clear-UserTempAndCaches {
     Write-Host "Limpieza de temporales por usuarios..." -ForegroundColor Cyan
 
     $userRoots = Get-ChildItem -Directory 'C:\Users' -ErrorAction SilentlyContinue | Where-Object {
-        $_.Name -notin @('Public','Default','Default User','All Users') -and
+        $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') -and
         -not ($_.Name.StartsWith('WDAGUtilityAccount'))
     }
 
-    foreach($u in $userRoots){
+    foreach ($u in $userRoots) {
 
         $paths = @(
             (Join-Path -Path $u.FullName -ChildPath 'AppData\Local\Temp\*')
@@ -106,7 +106,7 @@ function Clear-UserTempAndCaches {
             (Join-Path -Path $u.FullName -ChildPath 'AppData\Local\Microsoft\Edge\User Data\Default\GPUCache\*')
             (Join-Path -Path $u.FullName -ChildPath 'AppData\Local\Microsoft\Edge\User Data\Default\Service Worker\CacheStorage\*')
         )
-        foreach($p in $paths){
+        foreach ($p in $paths) {
 
             try { Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue }
             catch { }
@@ -119,13 +119,13 @@ function Clear-OfficeFileCache {
     Write-Host "Limpieza de OfficeFileCache (Office 16.0)..." -ForegroundColor Cyan
 
     # (Opcional) cerrar apps de Office para evitar archivos bloqueados
-    $officeProcs = @('winword','excel','powerpnt','outlook','onenote','msaccess')
-    foreach($p in $officeProcs){
+    $officeProcs = @('winword', 'excel', 'powerpnt', 'outlook', 'onenote', 'msaccess')
+    foreach ($p in $officeProcs) {
         Get-Process -Name $p -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     }
 
     $userRoots = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | Where-Object {
-        $_.Name -notin @('Public','Default','Default User','All Users') -and
+        $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') -and
         -not ($_.Name.StartsWith('WDAGUtilityAccount'))
     }
 
@@ -182,7 +182,7 @@ function Show-OutlookOst {
 
     Write-Host ("Revisando OST de Outlook (umbral: {0} GB)..." -f $ThresholdGB) -ForegroundColor Cyan
 
-    $excludeProfiles = @('Public','Default','Default User','All Users')
+    $excludeProfiles = @('Public', 'Default', 'Default User', 'All Users')
 
     $profileDirs = Get-ChildItem -Path $BaseUsersPath -Directory -ErrorAction SilentlyContinue | Where-Object {
         $excludeProfiles -notcontains $_.Name -and
@@ -212,33 +212,33 @@ function Show-OutlookOst {
 
     if ($results.Count -eq 0) {
         Write-Host "No se encontraron archivos OST en perfiles de usuario." -ForegroundColor DarkGray
-        if($PassThru){ return @() }
+        if ($PassThru) { return @() }
         return
     }
 
     # Selección para mostrar
     $toShow = $results | Sort-Object TamanoGB -Descending
-    if($SoloCriticos){
+    if ($SoloCriticos) {
         $toShow = $toShow | Where-Object SuperaUmbral
     }
 
-    if(-not $toShow -or $toShow.Count -eq 0){
+    if (-not $toShow -or $toShow.Count -eq 0) {
         Write-Host ("No hay OST que superen o igualen {0} GB." -f $ThresholdGB) -ForegroundColor Green
     }
     else {
         Write-Host "`n=== REPORTE OST (ordenado por tamaño) ===" -ForegroundColor Cyan
         $toShow |
-            Select-Object TamanoGB, Ruta, SuperaUmbral |
-            Format-Table -AutoSize | Out-Host
+        Select-Object TamanoGB, Ruta, SuperaUmbral |
+        Format-Table -AutoSize | Out-Host
 
         # Warnings solo para críticos (para que salte en log)
         $criticos = $results | Where-Object SuperaUmbral | Sort-Object TamanoGB -Descending
-        foreach($c in $criticos){
+        foreach ($c in $criticos) {
             Write-Warning ("OST grande detectado (>= {0} GB): Perfil={1} Tamaño={2} GB Ruta={3}" -f $ThresholdGB, $c.UsuarioPerfil, $c.TamanoGB, $c.Ruta)
         }
     }
 
-    if($PassThru){
+    if ($PassThru) {
         return $results
     }
 }
@@ -246,13 +246,13 @@ function Show-OutlookOst {
 # ===================== USUARIOS TEMP ======================
 function Clear-TempDomibcoFolders {
     $basePath = 'C:\Users'
-    $pattern  = 'TEMP.DOMIBCO.*'
+    $pattern = 'TEMP.DOMIBCO.*'
 
     Write-Host ("Limpieza de carpetas temporales de sesión: {0}\{1}" -f $basePath, $pattern) -ForegroundColor Cyan
 
     $folders = Get-ChildItem -Path $basePath -Directory -Filter $pattern -Force -ErrorAction SilentlyContinue
 
-    if(-not $folders -or $folders.Count -eq 0){
+    if (-not $folders -or $folders.Count -eq 0) {
         Write-Host "No se encontraron carpetas TEMP.DOMIBCO.*" -ForegroundColor DarkGray
         return
     }
@@ -270,7 +270,7 @@ function Clear-TempDomibcoFolders {
 
             try {
                 Get-ChildItem -LiteralPath $folder.FullName -Force -ErrorAction SilentlyContinue |
-                    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
                 Write-Host ("Contenido eliminado: {0}" -f $folder.FullName) -ForegroundColor Yellow
             }
@@ -283,8 +283,162 @@ function Clear-TempDomibcoFolders {
     Write-Host "Limpieza TEMP.DOMIBCO.* finalizada." -ForegroundColor Cyan
 }
 
-# ================ USUARIOS POR ANTIGÜEDAD =================
+# ================= ELIMINACION DE PERFIL ==================
+function Remove-UserProfileSafe {
+    param ([array]$PerfilesAEliminar)
+
+    if ($Null -eq $PerfilesAEliminar -or $PerfilesAEliminar.Count -eq 0) {
+        Write-Host "No se encontró ningún usuario elegible para eliminación (todos están protegidos)." -ForegroundColor Green
+        return
+    }
+
+    foreach ($Perfil in $PerfilesAEliminar) {
+        $Nombre = Split-Path $Perfil.LocalPath -Leaf
+        $RutaFisica = $Perfil.LocalPath
+        $UltimaConexion = if ($Perfil.LastUseTime) { $Perfil.LastUseTime.ToString("dd/MM/yyyy") } else { "Nunca" }
+        
+        Write-Host "Intentando eliminar perfil: $Nombre (Última vez: $UltimaConexion)..." -ForegroundColor Yellow
+        
+        try {
+            # Intentar la desasociación limpia del perfil
+            $Perfil | Remove-CimInstance
+            
+            # Pausa de un segundo para que el sistema procese la eliminación en disco
+            Start-Sleep -Seconds 1
+            
+            # VALIDACIÓN REAL: Verificar si la carpeta del perfil aún existe
+            if (Test-Path -Path $RutaFisica) {
+                Write-Warning "No se pudo eliminar el perfil $Nombre. El usuario podría tener una sesión activa o archivos bloqueados."
+            }
+            else {
+                Write-Host "¡Perfil $Nombre eliminado con éxito!`n" -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Warning "Error crítico al procesar el perfil $Nombre. Detalle: $($_.Exception.Message)"
+        }
+    }
+}
+
+# ==================== PERFILES LAPTOP =====================
+function Remove-NonLocalGroupProfiles {
+    param ([string[]]$UsuariosExtra)
+    
+    Write-Host "[MODO LAPTOP (L12)] Validando grupo Usuarios..." -ForegroundColor Cyan
+
+    # 1. Detectar el nombre correcto del grupo Usuarios (Español o Inglés)
+    $GrupoUsuarios = "Usuarios"
+    net localgroup $GrupoUsuarios 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        $GrupoUsuarios = "Users"
+    }
+
+    # 2. Obtener miembros del grupo Usuarios
+    $MiembrosUsuarios = (net localgroup $GrupoUsuarios 2>&1) | 
+    Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] -and $_ -notmatch '^(Alias|Comentario|Miembros|-|El comando completó|The command completed)' } | 
+    ForEach-Object { 
+        $Linea = $_.Trim()
+        if ($Linea -like "*\*") { $Linea.Split('\')[-1] } else { $Linea }
+    }
+
+    # 3. Identificar usuario de red activo en el grupo (numérico)
+    $UsuarioActivoGrupo = $MiembrosUsuarios | Where-Object { $_ -match '^\d+$' }
+    if ($UsuarioActivoGrupo) {
+        Write-Host "Usuario de red activo detectado en el grupo '$GrupoUsuarios': $UsuarioActivoGrupo" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "No se detectó ningún usuario de red activo (numérico) en el grupo '$GrupoUsuarios'." -ForegroundColor Yellow
+    }
+
+    # 4. Lista blanca fija de sistema
+    $UsuariosFijos = @("administrador", "admlocalsrvwindows", "homeuser", "default", "public")
+    $UsuariosExtraLimpios = $UsuariosExtra | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    $TotalUsuariosASalvar = ($UsuariosFijos + $UsuariosExtraLimpios + $UsuarioActivoGrupo) | ForEach-Object { $_.ToLower() }
+
+    Write-Host "Usuarios protegidos: $($TotalUsuariosASalvar -join ', ')" -ForegroundColor DarkCyan
+
+    # 5. Filtrar perfiles a eliminar (todos los usuarios de red numéricos que NO estén en la lista blanca)
+    $PerfilesAEliminar = Get-CimInstance -ClassName Win32_UserProfile | Where-Object {
+        $NombrePerfil = (Split-Path $_.LocalPath -Leaf).ToLower()
+        $_.Special -eq $False -and 
+        $_.LocalPath -notlike "*\Public" -and 
+        $NombrePerfil -match '^\d' -and
+        $NombrePerfil -notin $TotalUsuariosASalvar
+    }
+    
+    Remove-UserProfileSafe -PerfilesAEliminar $PerfilesAEliminar
+}
+
+# ================ PERFILES MAQUINA VIRTUAL ================
+function Remove-NonRDPProfiles {
+    param ([string[]]$UsuariosExtra)
+    
+    Write-Host "[MODO MAQUINA VIRTUAL (V12/A12)] Validando grupo de Escritorio Remoto..." -ForegroundColor Cyan
+
+    # 1. Detectar el nombre correcto del grupo RDP (Español o Inglés)
+    $GrupoRDP = "Usuarios de escritorio remoto"
+    net localgroup $GrupoRDP 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        $GrupoRDP = "Remote Desktop Users"
+    }
+
+    # 2. Obtener miembros del grupo RDP
+    Write-Host "Obteniendo miembros del grupo de Escritorio Remoto..." -ForegroundColor Cyan
+    $UsuariosRDP = (net localgroup $GrupoRDP 2>&1) | 
+    Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] -and $_ -notmatch '^(Alias|Comentario|Miembros|-|El comando completó|The command completed)' } | 
+    ForEach-Object { 
+        $Linea = $_.Trim()
+        if ($Linea -like "*\*") { $Linea.Split('\')[-1] } else { $Linea }
+    }
+
+    # 3. Lista blanca fija de sistema
+    $UsuariosFijos = @("administrador", "administrator", "admlocalsrvwindows", "homeuser", "default", "public")
+    $UsuariosExtraLimpios = $UsuariosExtra | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    $TotalUsuariosASalvar = ($UsuariosFijos + $UsuariosExtraLimpios + $UsuariosRDP) | ForEach-Object { $_.ToLower() }
+
+    Write-Host "Usuarios protegidos: $($TotalUsuariosASalvar -join ', ')" -ForegroundColor DarkCyan
+
+    # 4. Filtrar perfiles a eliminar
+    $PerfilesAEliminar = Get-CimInstance -ClassName Win32_UserProfile | Where-Object {
+        $NombrePerfil = (Split-Path $_.LocalPath -Leaf).ToLower()
+        $_.Special -eq $False -and 
+        $_.LocalPath -notlike "*\Public" -and 
+        $NombrePerfil -notin $TotalUsuariosASalvar
+    }
+    
+    Remove-UserProfileSafe -PerfilesAEliminar $PerfilesAEliminar
+}
+
+# ====================== PERFILES PC =======================
 function Remove-InactiveProfiles {
+    param (
+        [string[]]$UsuariosExtra,
+        [int]$MesesInactividad
+    )
+    
+    # 1. Lista blanca fija de sistema
+    $UsuariosFijos = @("administrador", "admlocalsrvwindows", "homeuser")
+    $UsuariosExtraLimpios = $UsuariosExtra | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    $TotalUsuariosASalvar = ($UsuariosFijos + $UsuariosExtraLimpios) | ForEach-Object { $_.ToLower() }
+
+    # 2. Calcular la fecha límite
+    $FechaLimite = (Get-Date).AddMonths(-$MesesInactividad)
+    Write-Host "Buscando perfiles sin actividad desde antes de: $($FechaLimite.ToString('dd/MM/yyyy'))" -ForegroundColor Cyan
+
+    # 3. Buscar y filtrar los perfiles
+    $PerfilesAEliminar = Get-CimInstance -ClassName Win32_UserProfile | Where-Object {
+        $NombrePerfil = (Split-Path $_.LocalPath -Leaf).ToLower()
+        $_.Special -eq $False -and 
+        $_.LocalPath -notlike "*\Public" -and 
+        $NombrePerfil -notin $TotalUsuariosASalvar -and 
+        ($_.LastUseTime -lt $FechaLimite -or $null -eq $_.LastUseTime)
+    }
+    
+    Remove-UserProfileSafe -PerfilesAEliminar $PerfilesAEliminar
+}
+
+# ================ ORQUESTADOR DE PERFILES =================
+function Remove-InvalidOrInactiveProfiles {
     [CmdletBinding()]
     param (
         # Parámetro para agregar usuarios extra (opcional)
@@ -292,41 +446,24 @@ function Remove-InactiveProfiles {
         [int]$MesesInactividad = 6
     )
 
-    # 1. Lista blanca fija de sistema
-    $UsuariosFijos = @("administrador", "admlocalsrvwindows", "homeuser")
-    
-    # 2. Combinar ambas listas en una sola lista de exclusión
-    $UsuariosExtraLimpios = $UsuariosExtra | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    $TotalUsuariosASalvar = $UsuariosFijos + $UsuariosExtraLimpios
+    $Hostname = $env:COMPUTERNAME.ToUpper()
 
-    # 3. Calcular la fecha límite
-    $FechaLimite = (Get-Date).AddMonths(-$MesesInactividad)
-    Write-Host "Buscando perfiles sin actividad desde antes de: $($FechaLimite.ToString('dd/MM/yyyy'))`n" -ForegroundColor Cyan
-
-    # 4. Buscar y filtrar los perfiles
-    $PerfilesAEliminar = Get-CimInstance -ClassName Win32_UserProfile | Where-Object {
-        $_.Special -eq $False -and 
-        $_.LocalPath -notlike "*\Public" -and 
-        # Aquí se evalúa la lista combinada completa
-        (Split-Path $_.LocalPath -Leaf) -notin $TotalUsuariosASalvar -and 
-        ($_.LastUseTime -lt $FechaLimite -or $_.LastUseTime -eq $Null)
+    if ($Hostname -like "L12*") {
+        Remove-NonLocalGroupProfiles -UsuariosExtra $UsuariosExtra
     }
-
-    # 5. Validar si se encontraron perfiles
-    if ($Null -eq $PerfilesAEliminar -or $PerfilesAEliminar.Count -eq 0) {
-        Write-Host "No se encontró ningún usuario sin actividad de $MesesInactividad meses." -ForegroundColor Red
-    } else {
-        # 6. Proceder a eliminar de forma segura
-        foreach ($Perfil in $PerfilesAEliminar) {
-            $Nombre = Split-Path $Perfil.LocalPath -Leaf
-            $UltimaConexion = if ($Perfil.LastUseTime) { $Perfil.LastUseTime.ToString("dd/MM/yyyy") } else { "Nunca" }
-            
-            Write-Host "Eliminando perfil inactivo: $Nombre (Última vez: $UltimaConexion)..." -ForegroundColor Yellow
-            
-            # Ejecuta la eliminación
-            $Perfil | Remove-CimInstance
-            Write-Host "¡Perfil $Nombre eliminado con éxito!`n" -ForegroundColor Green
+    elseif ($Hostname -like "V12*" -or $Hostname -like "A12*") {
+        Remove-NonRDPProfiles -UsuariosExtra $UsuariosExtra
+    }
+    else {
+        # Para hostnames que comienzan con P o cualquier otro caso por defecto
+        if ($Hostname -like "P*") {
+            Write-Host "[MODO PC] Aplicando lógica de inactividad de 6 meses..." -ForegroundColor Cyan
         }
+        else {
+            Write-Host "[MODO DEFAULT] Hostname '$Hostname' no reconocido. Aplicando lógica estándar de 6 meses..." -ForegroundColor Yellow
+        }
+        
+        Remove-InactiveProfiles -UsuariosExtra $UsuariosExtra -MesesInactividad $MesesInactividad
     }
 }
 
@@ -335,11 +472,11 @@ function Invoke-CleanUserProfiles {
     function Get-Size($Path) {
         try {
             $sum = (Get-ChildItem $Path -Recurse -File -ErrorAction SilentlyContinue |
-                    Measure-Object -Property Length -Sum).Sum
+                Measure-Object -Property Length -Sum).Sum
 
             if ($null -eq $sum) { return 0 }
 
-            return :Round(($sum / 1MB), 2)
+            return [math]::Round(($sum / 1MB), 2)
         }
         catch {
             return 0
@@ -347,8 +484,8 @@ function Invoke-CleanUserProfiles {
     }
 
     $Usuarios = Get-CimInstance Win32_UserProfile |
-        Where-Object { $_.LocalPath -like "C:\Users\*" -and $_.Special -eq $false } |
-        ForEach-Object { Get-Item $_.LocalPath }
+    Where-Object { $_.LocalPath -like "C:\Users\*" -and $_.Special -eq $false } |
+    ForEach-Object { Get-Item $_.LocalPath }
 
     foreach ($User in $Usuarios) {
 
@@ -359,8 +496,8 @@ function Invoke-CleanUserProfiles {
         Write-Host "`n===== $Usuario =====" -ForegroundColor Cyan
 
         # CARPETAS PERSONALES
-        $CarpetasPers = @("Documents","Downloads","Pictures","Videos")
-        $ExtBasura = ".tmp",".log",".old",".exe",".msi"
+        $CarpetasPers = @("Documents", "Downloads", "Pictures", "Videos")
+        $ExtBasura = ".tmp", ".log", ".old", ".exe", ".msi"
 
         foreach ($c in $CarpetasPers) {
             $RutaC = "$RaizUser\$c"
@@ -369,12 +506,12 @@ function Invoke-CleanUserProfiles {
                 $pesoAntes = Get-Size $RutaC
 
                 $Archivos = Get-ChildItem $RutaC -Recurse -File -ErrorAction SilentlyContinue |
-                            Where-Object { $_.Extension -in $ExtBasura }
+                Where-Object { $_.Extension -in $ExtBasura }
 
                 foreach ($f in $Archivos) {
                     if ($f -is [System.IO.FileInfo]) {
 
-                        $sizeMB = :Round(($f.Length / 1MB), 2)
+                        $sizeMB = [math]::Round(($f.Length / 1MB), 2)
                         $TotalLiberado += $sizeMB
 
                         Remove-Item $f.FullName -Force -ErrorAction SilentlyContinue
@@ -399,7 +536,7 @@ function Invoke-CleanUserProfiles {
                     Write-Host "Programa: $($Prog.Name) -> $pesoProg MB"
 
                     $Basura = Get-ChildItem $Prog.FullName -Directory -Recurse -ErrorAction SilentlyContinue |
-                              Where-Object { $_.Name -match "Cache|Logs|Temp|CrashDumps" }
+                    Where-Object { $_.Name -match "Cache|Logs|Temp|CrashDumps" }
 
                     foreach ($b in $Basura) {
                         $pBasura = Get-Size $b.FullName
@@ -417,24 +554,24 @@ function Invoke-CleanUserProfiles {
     }
 }
 
-# ==========================================================
+# ================= CONFIGURACION CLEANMGR =================
 function Set-CleanMgrSageSet {
     # Configura StateFlags1337 = 2 en categorías de CleanMgr
     $base = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches'
     $subkeys = @(
-        'Previous Installations','Active Setup Temp Folders','BranchCache','Downloaded Program Files',
-        'GameNewsFiles','GameStatisticsFiles','GameUpdateFiles','Internet Cache Files',
-        'Memory Dump Files','Offline Pages Files','Old ChkDsk Files','Recycle Bin',
-        'Service Pack Cleanup','Setup Log Files','System error memory dump files','System error minidump files',
-        'Temporary Files','Temporary Setup Files','Temporary Sync Files','Thumbnail Cache',
-        'Update Cleanup','Upgrade Discarded Files','User file versions','Windows Defender',
-        'Windows Error Reporting Archive Files','Windows Error Reporting Queue Files',
-        'Windows Error Reporting System Archive Files','Windows Error Reporting System Queue Files',
-        'Windows ESD installation files','Windows Upgrade Log Files'
+        'Previous Installations', 'Active Setup Temp Folders', 'BranchCache', 'Downloaded Program Files',
+        'GameNewsFiles', 'GameStatisticsFiles', 'GameUpdateFiles', 'Internet Cache Files',
+        'Memory Dump Files', 'Offline Pages Files', 'Old ChkDsk Files', 'Recycle Bin',
+        'Service Pack Cleanup', 'Setup Log Files', 'System error memory dump files', 'System error minidump files',
+        'Temporary Files', 'Temporary Setup Files', 'Temporary Sync Files', 'Thumbnail Cache',
+        'Update Cleanup', 'Upgrade Discarded Files', 'User file versions', 'Windows Defender',
+        'Windows Error Reporting Archive Files', 'Windows Error Reporting Queue Files',
+        'Windows Error Reporting System Archive Files', 'Windows Error Reporting System Queue Files',
+        'Windows ESD installation files', 'Windows Upgrade Log Files'
     )
-    foreach($k in $subkeys){
+    foreach ($k in $subkeys) {
         $path = Join-Path $base $k
-        if(Test-Path $path){
+        if (Test-Path $path) {
             try { New-ItemProperty -Path $path -Name 'StateFlags1337' -Value 2 -PropertyType DWord -Force | Out-Null } catch {}
         }
     }
@@ -443,7 +580,7 @@ function Set-CleanMgrSageSet {
 # ----------------------------------------------------------
 # ========================= INICIO =========================
 # ----------------------------------------------------------
-if(-not (Test-Admin)){
+if (-not (Test-Admin)) {
     Write-Error "Ejecute este script en una consola de PowerShell **como Administrador**."
     exit 1
 }
@@ -458,7 +595,7 @@ Write-Host "Equipo: $ComputerName" -ForegroundColor Green
 
 # Transcript (log)
 $logDir = 'C:\Windows\Temp\CleanupLogs'
-if(-not (Test-Path $logDir)){ New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 $logPath = Join-Path $logDir ("Cleanup_{0:yyyyMMdd_HHmmss}.log" -f (Get-Date))
 Start-Transcript -Path $logPath -ErrorAction SilentlyContinue | Out-Null
 Write-Host "Log: $logPath" -ForegroundColor DarkGray
@@ -468,51 +605,55 @@ $initialFree = (Get-PSDrive -Name C).Free
 
 try {
     # --- bcdedit numproc (POR DEFECTO: ON) ---
-    if(-not $NoBCDNumProc){
-        try{
+    if (-not $NoBCDNumProc) {
+        try {
             # Equivalente a %NUMBER_OF_PROCESSORS% (procesadores lógicos)
             $numproc = [int]$env:NUMBER_OF_PROCESSORS
-            if($numproc -gt 0){
+            if ($numproc -gt 0) {
                 Write-Host "Aplicando bcdedit numproc = $numproc (por defecto)..." -ForegroundColor Yellow
-                bcdedit /set {current} numproc $numproc | Out-Null
-            } else {
+                bcdedit /set { current } numproc $numproc | Out-Null
+            }
+            else {
                 Write-Warning "No se pudo determinar NUMBER_OF_PROCESSORS; se omite bcdedit."
             }
-        } catch { Write-Warning "bcdedit numproc falló: $($_.Exception.Message)" }
-    } else {
+        }
+        catch { Write-Warning "bcdedit numproc falló: $($_.Exception.Message)" }
+    }
+    else {
         Write-Host "Omitiendo bcdedit numproc (NoBCDNumProc)." -ForegroundColor DarkGray
     }
 
     # --- Limpieza por Perfil ---
     if ($ComputerName -match "ADN|EDN|EDR|ABS|EBS|ECP|RBS|RP") {
 
-        Remove-FilesByAge @("*.ost","*.ost.corrupt") 7
-        Remove-FilesByAge @("*.pdf","*.jpg","*.png") 60
-        Remove-FilesByAge @("*.zip","*.crdownload") 2
+        Remove-FilesByAge @("*.ost", "*.ost.corrupt") 7
+        Remove-FilesByAge @("*.pdf", "*.jpg", "*.png") 60
+        Remove-FilesByAge @("*.zip", "*.crdownload") 2
 
     }
     elseif ($ComputerName -match "JBS|JN|GA") {
 
         Remove-FilesByAge @("*.ost") 15
-        Remove-FilesByAge @("*.pdf","*.jpg") 180
+        Remove-FilesByAge @("*.pdf", "*.jpg") 180
 
     }
 
     # --- Papelera de reciclaje (todos los usuarios) ---
     Write-Host "Vaciando Papelera de reciclaje..." -ForegroundColor Cyan
     try { 
-		Clear-RecycleBin -Force -ErrorAction SilentlyContinue
-		Get-ChildItem "C:\$Recycle.Bin" -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-	} catch {}
+        Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+        Get-ChildItem "C:\$Recycle.Bin" -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+    }
+    catch {}
 
     # --- Detener servicios relacionados con Windows Update / ConfigMgr ---
-    'CcmExec','bits','wuauserv','appidsvc' | ForEach-Object { Stop-ServiceSafe $_ }
+    'CcmExec', 'bits', 'wuauserv', 'appidsvc' | ForEach-Object { Stop-ServiceSafe $_ }
 
     # --- Limpiezas de sistema ---
     Write-Host "Limpieza de carpetas de sistema..." -ForegroundColor Cyan
     Remove-PathSafe -Path "$env:SystemRoot\SoftwareDistribution\Download"
     #! Remove-PathSafe -Path "$env:SystemRoot\SoftwareDistribution\*"
-    if($Agresivo){
+    if ($Agresivo) {
         Remove-PathSafe "$env:SystemRoot\Prefetch\*"
     }
     Remove-PathSafe -Path "$env:SystemRoot\Temp\*"
@@ -527,60 +668,65 @@ try {
     Remove-PathSafe -Path "C:\Mibanco\Aplicativos\Cliente\GlobalProtect\"
 
     # --- Limpiezas de Topaz dinámico ---
-	Get-ChildItem -Path C:\ -Directory -Depth 1 -ErrorAction SilentlyContinue |
+    Get-ChildItem -Path C:\ -Directory -Depth 1 -ErrorAction SilentlyContinue |
     Where-Object { $_.Name -match '^Topaz' } |
     ForEach-Object { Remove-PathSafe $_.FullName }
 
     # --- Cerrar navegadores y limpiar temporales/cachés por usuario ---
     Write-Host "Cerrando procesos de navegadores..." -ForegroundColor Cyan
-    foreach($p in 'chrome','msedge'){ Get-Process -Name $p -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
+    foreach ($p in 'chrome', 'msedge') { Get-Process -Name $p -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }
     Clear-UserTempAndCaches
 
     # --- Limpieza OfficeFileCache ---
-    if(-not $NoOfficeCache){
+    if (-not $NoOfficeCache) {
         Clear-OfficeFileCache
-    } else {
+    }
+    else {
         Write-Host "Omitiendo limpieza OfficeFileCache (NoOfficeCache)." -ForegroundColor DarkGray
     }
 
     # --- Reporte OST ---
-    if(-not $NoOstReport){
+    if (-not $NoOstReport) {
         Show-OutlookOst -ThresholdGB 50
-    } else {
+    }
+    else {
         Write-Host "Omitiendo reporte de OST (NoOstReport)." -ForegroundColor DarkGray
     }
 
     # --- Limpieza de usuarios TEMP ---
-    if(-not $NoTempDomibco){
+    if (-not $NoTempDomibco) {
         Clear-TempDomibcoFolders
-    } else {
+    }
+    else {
         Write-Host "Omitiendo limpieza de carpetas temporales de sesión (NoTempDomibco)" -ForegroundColor DarkGray
     }
 
-    # --- Limpieza de usuarios OLD ---
-    Remove-InactiveProfiles -UsuariosExtra "" -MesesInactividad 6
+    # --- Limpieza de perfiles según tipo de equipo ---
+    Remove-InvalidOrInactiveProfiles -UsuariosExtra "" -MesesInactividad 6
 
-	# --- Limpiar archivos de Usuarios ---
-	Invoke-CleanUserProfiles
+    # --- Limpiar archivos de Usuarios ---
+    Invoke-CleanUserProfiles
 
     # --- Reiniciar servicios ---
-    'bits','wuauserv','appidsvc','CcmExec' | ForEach-Object { Start-ServiceSafe $_ }
+    'bits', 'wuauserv', 'appidsvc', 'CcmExec' | ForEach-Object { Start-ServiceSafe $_ }
 
     # --- Desactivar telemetría (solo detener) ---
     Stop-ServiceSafe 'DiagTrack'
 
     # --- CleanMgr (POR DEFECTO: ON) ---
-    if(-not $NoCleanMgr){
+    if (-not $NoCleanMgr) {
         Write-Host "Configurando CleanMgr..." -ForegroundColor Yellow
         Set-CleanMgrSageSet
         $cleanmgr = "$env:SystemRoot\System32\cleanmgr.exe"
-        if(Test-Path $cleanmgr){
+        if (Test-Path $cleanmgr) {
             Write-Host "Ejecutando CleanMgr /sagerun:1337..." -ForegroundColor Yellow
             Start-Process -FilePath $cleanmgr -ArgumentList '/sagerun:1337' -Wait -WindowStyle Hidden
-        } else {
+        }
+        else {
             Write-Warning "CleanMgr no encontrado en este equipo."
         }
-    } else {
+    }
+    else {
         Write-Host "Omitiendo CleanMgr (NoCleanMgr)." -ForegroundColor DarkGray
     }
 
@@ -588,20 +734,22 @@ try {
     Invoke-StoreCleanup
 
     # --- Acciones agresivas (opcional) ---
-    if($Agresivo){
+    if ($Agresivo) {
         Write-Host "Aplicando acciones agresivas (ReservedStorage OFF, hibernación OFF, DISM cleanup)..." -ForegroundColor Yellow
         try { dism.exe /Online /Set-ReservedStorageState /State:Disabled | Out-Null } catch { Write-Warning "No se pudo desactivar ReservedStorage." }
         try { powercfg.exe /hibernate off | Out-Null } catch { Write-Warning "No se pudo desactivar hibernación." }
         try { Dism.exe /Online /Cleanup-Image /StartComponentCleanup /Quiet | Out-Null } catch { Write-Warning "DISM StartComponentCleanup falló." }
     }
 
-} finally {
+}
+finally {
     $finalFree = (Get-PSDrive -Name C).Free
     $freedMB = [math]::Round(($finalFree - $initialFree) / 1MB, 2)
 
-    if($freedMB -ge 0){
+    if ($freedMB -ge 0) {
         Write-Host ("Espacio liberado aproximado: {0} MB" -f $freedMB) -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host ("Cambio de espacio libre: {0} MB (negativo = consumo durante ejecución)" -f $freedMB) -ForegroundColor Yellow
     }
 
