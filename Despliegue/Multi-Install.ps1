@@ -9,7 +9,7 @@ $computers     = @(
 #>
 
 # Componentes de la ruta
-$localRoot     = 'C:' 
+$localRoot     = 'C:\Temp' 
 $relativePath  = 'npp.8.8.2.Installer.x64.exe'
 
 # Encabezado
