@@ -77,10 +77,30 @@ function Enable-LocalAdminForDomain {
         $Password = ConvertTo-SecureString "12345678" -AsPlainText -Force
         Set-LocalUser -Name "Administrador" -Password $Password -ErrorAction Stop
 
-        Write-Host "[OK] Cuenta 'Administrador' habilitada con contrasena temporal." -ForegroundColor Green
+        Write-Host "[OK] Cuenta 'Administrador' habilitada con contrasena temporal '12345678'." -ForegroundColor Green
     }
     catch {
         Exit-Error -Message "[CRITICO] No se pudo habilitar la cuenta Administrador: $($_.Exception.Message)"
+    }
+
+    # Validacion indispensable de la cuenta Administrador activa y su contrasena antes de continuar
+    Write-Host "[INFO] Validando acceso y estado de la cuenta 'Administrador'..." -ForegroundColor Cyan
+    try {
+        $User = Get-LocalUser -Name "Administrador" -ErrorAction Stop
+        if (-not $User.Enabled) {
+            throw "La cuenta 'Administrador' esta deshabilitada."
+        }
+
+        # Validar la contraseña intentando enlazar via WinNT
+        $DE = New-Object System.DirectoryServices.DirectoryEntry("WinNT://$env:COMPUTERNAME", "Administrador", "12345678")
+        $null = $DE.NativeObject
+        Write-Host "[OK] Validacion indispensable exitosa: Cuenta 'Administrador' activa y con la contrasena correcta (12345678)." -ForegroundColor Green
+    }
+    catch {
+        Exit-Error -Message "[CRITICO] Error de validacion indispensable: La cuenta 'Administrador' no esta activa o no tiene la contrasena temporal '12345678'." -Details @(
+            "Detalles: $($_.Exception.Message)",
+            "No se puede continuar con la subida al dominio ni reiniciar el equipo por riesgo de bloqueo."
+        )
     }
 }
 
@@ -383,6 +403,7 @@ function Confirm-Operation {
 
 $DominioActual  = Get-CurrentDomain
 $UsuarioActual  = Get-CurrentUser
+$IsAdmin        = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 Write-Host "`n======================================" -ForegroundColor Magenta
 Write-Host " POST-IMAGE CONFIGURATION TOOL"
@@ -392,30 +413,26 @@ Write-Host " Dominio : $(if ([string]::IsNullOrWhiteSpace($DominioActual)) { '(s
 Write-Host "======================================`n" -ForegroundColor Magenta
 
 # --------------------------------------------------
-# FASE 1 - Sin dominio, usuario mibanco
+# FASE 1 - Sin dominio (Requiere privilegios de Administrador)
 # --------------------------------------------------
-if ([string]::IsNullOrWhiteSpace($DominioActual) -and $UsuarioActual -eq "mibanco") {
+if ([string]::IsNullOrWhiteSpace($DominioActual)) {
+    if ($IsAdmin) {
+        Write-Host "[FASE 1] Equipo sin dominio detectado. Ejecutando con privilegios de Administrador." -ForegroundColor Yellow
 
-    Write-Host "[FASE 1] Equipo sin dominio detectado. Usuario: mibanco" -ForegroundColor Yellow
+        Enable-LocalAdminForDomain
+        Join-ComputerToDomain -DomainFQDN $DominioCorrecto
 
-    Enable-LocalAdminForDomain
-    Join-ComputerToDomain -DomainFQDN $DominioCorrecto
-
-    # El script no continua: Join-ComputerToDomain reinicia el equipo
-    exit 0
-}
-
-# --------------------------------------------------
-# FASE 1 - Sin dominio, usuario NO es mibanco
-# --------------------------------------------------
-if ([string]::IsNullOrWhiteSpace($DominioActual) -and $UsuarioActual -ne "mibanco") {
-    Exit-Error `
-        -Message "[BLOQUEADO] El equipo no tiene dominio pero el usuario actual no es 'mibanco'." `
-        -Details @(
-            "Usuario actual : $UsuarioActual",
-            "Esperado       : mibanco",
-            "Accion         : Inicie sesion con el usuario local .\mibanco y vuelva a ejecutar."
-        )
+        # El script no continua: Join-ComputerToDomain reinicia el equipo
+        exit 0
+    }
+    else {
+        Exit-Error `
+            -Message "[BLOQUEADO] El equipo no tiene dominio y el script no se esta ejecutando con privilegios de Administrador." `
+            -Details @(
+                "Usuario actual : $UsuarioActual",
+                "Accion         : Ejecute la consola de PowerShell como Administrador y vuelva a intentar."
+            )
+    }
 }
 
 # A partir de aqui el equipo SI esta en dominio
@@ -434,6 +451,10 @@ if ($DominioActual.ToLower() -ne $DominioCorrecto.ToLower()) {
 if ($UsuarioActual -eq "Administrador") {
 
     Write-Host "[FASE 2a] Equipo en dominio. Usuario: Administrador" -ForegroundColor Cyan
+
+    # Recien aqui (ya validado el usuario Administrador) se puede eliminar el usuario mibanco
+    Write-Step -Title "LIMPIEZA DE USUARIOS"
+    Remove-DefaultLocalUser -UserName $UsuarioAEliminar
 
     Confirm-OUAndRestart
 
